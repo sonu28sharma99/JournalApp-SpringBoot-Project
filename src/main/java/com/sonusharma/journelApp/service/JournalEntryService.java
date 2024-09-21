@@ -6,6 +6,7 @@ import com.sonusharma.journelApp.repository.JournalEntryRepository;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -20,12 +21,19 @@ public class JournalEntryService{
     @Autowired
     private UserService userService;
 
-    public void saveEntry(JournalEntry journalEntry, String username){
-        User userInDb = userService.findByUsername(username);
-        journalEntry.setDate(LocalDate.now());
-        JournalEntry savedEntry =  journalEntryRepository.save(journalEntry);
-        userInDb.getJournalEntryList().add(savedEntry);
-        userService.saveUser(userInDb);
+    @Transactional
+    public void saveEntry(JournalEntry journalEntry, String username) {
+       try {
+            User userInDb = userService.findByUsername(username);
+            journalEntry.setDate(LocalDate.now());
+            JournalEntry savedEntry = journalEntryRepository.save(journalEntry);
+            userInDb.getJournalEntryList().add(savedEntry);
+//            userInDb.setUsername(null); // deliberately setting null for understanding transaction in db
+            userService.saveUser(userInDb);
+        }catch (Exception e){
+           System.out.println(e);
+           throw new RuntimeException("Transaction not done properly!");
+       }
     }
 
     public void saveEntry(JournalEntry journalEntry){
