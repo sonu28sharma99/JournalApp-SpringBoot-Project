@@ -1,7 +1,9 @@
 package com.sonusharma.journelApp.controller;
 
 import com.sonusharma.journelApp.entity.JournalEntry;
+import com.sonusharma.journelApp.entity.User;
 import com.sonusharma.journelApp.service.JournalEntryService;
+import com.sonusharma.journelApp.service.UserService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,21 +19,27 @@ public class JournalEntityController {
     @Autowired
     private JournalEntryService journalEntryService;
 
-    @GetMapping
-    public List<JournalEntry> getAll(){
-        return journalEntryService.findAll();
-    }
+    @Autowired
+    private UserService userService;
 
-    @DeleteMapping("/deleteAll")
-    public ResponseEntity<?> deleteAll(){
-        Optional<JournalEntry> response = journalEntryService.deleteAll();
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    @PostMapping
-    public ResponseEntity<JournalEntry> createEntry(@RequestBody JournalEntry myEntry){
+    @GetMapping("/{username}")
+    public ResponseEntity<?> getAllJournalEntryOfUser(@PathVariable String username){
         try{
-            journalEntryService.saveEntry(myEntry);
+            // first find user in db
+            User user = userService.findByUsername(username);
+            // then return the journal entries of user
+            List<JournalEntry> journalEntries = user.getJournalEntryList();
+            return new ResponseEntity<>(journalEntries, HttpStatus.OK);
+        }catch(Exception e){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+
+        }
+    }
+
+    @PostMapping("/{username}")
+    public ResponseEntity<JournalEntry> createJournalEntryOfUser(@RequestBody JournalEntry myEntry, @PathVariable String username){
+        try{
+            journalEntryService.saveEntry(myEntry, username);
             return new ResponseEntity<>(myEntry, HttpStatus.CREATED);
         }catch(Exception e){
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -46,20 +54,19 @@ public class JournalEntityController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @DeleteMapping("id/{myId}")
-    public ResponseEntity<?> deleteJournalById(@PathVariable ObjectId myId){
-        Optional<JournalEntry> deleteJournal = journalEntryService.getEntryById(myId);
-        if(deleteJournal.isEmpty())
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        else{
-            journalEntryService.deleteEntryById(myId);
+    @DeleteMapping("id/{username}/{journalId}")
+    public ResponseEntity<Object> deleteJournalById(@PathVariable ObjectId journalId, @PathVariable String username){
+        try{
+            journalEntryService.deleteEntryById(journalId, username);
             return new ResponseEntity<>(HttpStatus.OK);
+        }catch (Exception e){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
     }
 
-    @PutMapping("id/{myId}")
-    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId myId, @RequestBody JournalEntry myEntry){
-        JournalEntry oldEntry = journalEntryService.getEntryById(myId).orElse(null);
+    @PutMapping("id/{username}/{journalId}")
+    public ResponseEntity<?> updateJournalById(@PathVariable ObjectId journalId, @RequestBody JournalEntry myEntry){
+        JournalEntry oldEntry = journalEntryService.getEntryById(journalId).orElse(null);
         if(oldEntry == null)
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         else{

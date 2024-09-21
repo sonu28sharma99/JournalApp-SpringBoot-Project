@@ -26,4 +26,8 @@ public class User {
     @DBRef
     private List<JournalEntry> journalEntryList = new ArrayList<>();
 
+    void addJournalEntryList(JournalEntry journalEntry){
+        journalEntryList.add(journalEntry);
+    }
+
 }
